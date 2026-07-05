@@ -1,0 +1,6 @@
+name = "wireless-power-transfer-toolbox"
+compatibility_date = "2026-07-05"
+
+[assets]
+directory = "."
+binding = "ASSETS"
