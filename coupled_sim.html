@@ -1,0 +1,1217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Wireless Power Transfer Toolbox</title>
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 16px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tab-btn {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #bbb;
+      background: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      color: #111;
+    }
+    .tab-btn.active {
+      border-color: #111;
+      background: #111;
+      color: #fff;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Layout */
+    .grid { display: grid; grid-template-columns: 390px 1fr; gap: 16px; align-items: start; }
+
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    label { display: block; font-size: 12px; color: #444; margin-top: 8px; }
+
+    input[type="number"] { width: 150px; padding: 8px; border-radius: 10px; border: 1px solid #ccc; }
+    select { width: 180px; padding: 8px; border-radius: 10px; border: 1px solid #ccc; }
+
+    button { padding: 10px 12px; border-radius: 10px; border: 1px solid #222; background: #111; color: #fff; cursor: pointer; }
+    button.secondary { background: #fff; color: #111; border-color: #bbb; }
+
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    .small { font-size: 12px; color: #666; line-height: 1.35; }
+
+    /* Top circuit image centered */
+    .top-card { text-align: center; }
+    img.circuit{
+      display: block;
+      margin: 0 auto;
+      width: 900px;
+      max-width: 100%;
+      max-height: 360px;
+      object-fit: contain;
+    }
+
+    .kv { display: grid; grid-template-columns: max-content max-content; gap: 6px 12px; margin-top: 10px; }
+    .kv div { padding: 2px 0; }
+
+    hr { border: none; border-top: 1px solid #eee; margin: 12px 0; }
+  </style>
+</head>
+
+<body>
+  <h2 style="margin:0 0 12px 0;">Wireless Power Transfer Toolbox</h2>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn" data-tab="tab1">Air Core Coil Design</button>
+    <!-- <button class="tab-btn active" data-tab="sim">Circuit Simulation</button> -->
+    <button class="tab-btn" data-tab="tab3">Useful Calculator</button>
+  </div>
+
+    <!-- Tab 1 -->
+    <div id="tab-tab1" class="tab-panel">
+    <div class="card">
+        <h3 style="margin:0 0 8px 0;">Coil design</h3>
+
+        <div class="row">
+        <div>
+            <label>Coil type</label>
+            <select id="coilType">
+          <option value="planar">Planar Coil</option>
+          <option value="helix">Helix Coil</option>
+            <option value="pcb">PCB Coil</option>
+            </select>
+        </div>
+        <div>
+            <label>Turns N</label>
+            <input id="coilN" type="number" step="1" value="5" />
+        </div>
+        </div>
+
+        <!-- Spiral / helix parameters -->
+        <div id="spiralParams">
+        <div class="row">
+            <div>
+          <label id="spDoutLabel">Planar start radius Rstart (mm) (innermost center radius)</label>
+            <input id="spDout" type="number" step="0.1" value="5" />
+            </div>
+            <div>
+          <label id="spPitchLabel">Pitch (mm) (centerline spacing per turn)</label>
+            <input id="spPitch" type="number" step="0.1" value="1" />
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+          <label id="spDwireLabel">Wire diameter dwire (mm)</label>
+            <input id="spDwire" type="number" step="0.1" value="0.5" />
+            </div>
+            <div>
+            <label>Environment εr (air≈1)</label>
+            <input id="coilEr" type="number" step="0.1" value="1.0" />
+            </div>
+        </div>
+
+          <div id="planarLayerParams" class="row">
+            <div>
+            <label>Planar layers</label>
+            <input id="planarLayers" type="number" step="1" value="1" />
+            </div>
+            <div>
+            <label>Layer spacing (mm) (center-to-center)</label>
+            <input id="planarLayerSpacing" type="number" step="0.1" value="0.5" />
+            </div>
+          </div>
+          <div id="planarLayerHint" class="small">Layers are stacked by copying layer 1 to upper layers with the same winding direction.</div>
+        </div>
+
+        <!-- PCB parameters -->
+        <div id="pcbParams" style="display:none;">
+        <div class="row">
+            <div>
+            <label>Copper thickness t (mm) (1oz≈0.035)</label>
+            <input id="pcbTcu" type="number" step="0.001" value="0.035" />
+            </div>
+            <div>
+            <label>Trace width w (mm)</label>
+            <input id="pcbW" type="number" step="0.1" value="0.5" />
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+          <label>Start radius Rstart (mm) (center radius of innermost turn)</label>
+            <input id="pcbRstart" type="number" step="0.1" value="3" />
+            </div>
+            <div>
+            <label>Pitch (mm) (= width + spacing)</label>
+            <input id="pcbPitch" type="number" step="0.1" value="1" />
+            <div class="small">Spacing = pitch − width (must be ≥ 0)</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+            <label>Substrate material</label>
+            <select id="pcbSubstratePreset">
+              <option value="4.2">FR4 (εr≈4.2)</option>
+              <option value="3.4">Polyimide (εr≈3.4)</option>
+            </select>
+            </div>
+            <div>
+            <label>Substrate εr</label>
+            <input id="coilEr_pcb" type="number" step="0.1" value="4.2" />
+            </div>
+        </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:12px;">
+        <button id="coilRunBtn">Compute</button>
+        </div>
+
+        <div class="kv" style="margin-top:10px;">
+        <div class="small">Computed Din (mm)</div><div id="coilDin" class="mono">-</div>
+        <div class="small">Computed overall D (mm)</div><div id="coilDoutOut" class="mono">-</div>
+        <div class="small">Inductance L (H)</div><div id="coilL" class="mono">-</div>
+        <div class="small">Parasitic Cp (F) (rough)</div><div id="coilCp" class="mono">-</div>
+        <div class="small">Self-resonant fSRF (Hz)</div><div id="coilSrf" class="mono">-</div>
+        </div>
+
+        <hr>
+
+        <div id="coilPlot" style="height:420px;"></div>
+        <div class="small">Tip: drag to rotate the solid 3D preview.</div>
+    </div>
+    </div>
+
+
+  <!-- Tab 2: Circuit Simulation (commented out for now)
+  <div id="tab-sim" class="tab-panel active">
+    <div class="card top-card">
+      <img class="circuit" src="circuit.png" alt="Circuit schematic">
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="row">
+          <div>
+            <label>Coupling Coefficient k (K L1 L2)</label>
+            <input id="kNum" type="number" step="0.001" value="0.03" />
+          </div>
+          <div>
+            <label>dt (s) (MaxStep)</label>
+            <input id="dtNum" type="number" step="1e-10" value="2e-9" />
+            <div class="small">Reduce dt if results are unstable</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Tend (s)</label>
+            <input id="TendNum" type="number" step="1e-6" value="50e-6" />
+          </div>
+          <div>
+            <label>Vpp measured over last periods</label>
+            <input id="lastPeriodsNum" type="number" step="1" value="30" />
+          </div>
+        </div>
+
+        <hr>
+
+        <div class="row">
+          <div>
+            <label>R5 (Ω)</label>
+            <input id="R5" type="number" step="0.0001" value="0.0015" />
+          </div>
+          <div>
+            <label>C1 (F)</label>
+            <input id="C1" type="number" step="1e-13" value="120e-12" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>R1 (Ω)</label>
+            <input id="R1" type="number" step="0.01" value="1" />
+          </div>
+          <div>
+            <label>L1 (H)</label>
+            <input id="L1" type="number" step="1e-9" value="4.7e-6" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>R4 (Ω)</label>
+            <input id="R4" type="number" step="0.001" value="0.022" />
+          </div>
+          <div>
+            <label>R2 (Ω)</label>
+            <input id="R2" type="number" step="0.01" value="1" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>L2 (H)</label>
+            <input id="L2" type="number" step="1e-9" value="4.9e-6" />
+          </div>
+          <div>
+            <label>C2 (F)</label>
+            <input id="C2" type="number" step="1e-13" value="112e-12" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>R3 (Ω)</label>
+            <input id="R3" type="number" step="0.1" value="10" />
+          </div>
+          <div>
+            <label>Pulse V2 (V)</label>
+            <input id="V2" type="number" step="0.1" value="2" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Pulse ton (s)</label>
+            <input id="ton" type="number" step="1e-9" value="73.7463e-9" />
+          </div>
+          <div>
+            <label>Pulse T (s)</label>
+            <input id="T" type="number" step="1e-9" value="147.4926e-9" />
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:12px;">
+          <button id="runBtn">Run</button>
+          <button id="resetBtn" class="secondary">Reset</button>
+        </div>
+
+        <div id="status" class="small" style="margin-top:10px;"></div>
+
+        <div class="kv mono">
+          <div>M (H)</div><div id="Mout">-</div>
+          <div>Vpp on R4 (V)</div><div id="VppR4">-</div>
+          <div>Vpp on R3 (V)</div><div id="VppR3">-</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="plotR4" style="height:360px;"></div>
+        <div id="plotR3" style="height:360px; margin-top:12px;"></div>
+      </div>
+    </div>
+  </div> -->
+
+  <!-- Tab 3 -->
+  <div id="tab-tab3" class="tab-panel">
+    <div class="card">
+      <h3 style="margin:0 0 12px 0;">Tools</h3>
+
+      <h4 style="margin:0 0 8px 0;">1) Pulse timing from frequency</h4>
+      <div class="row">
+        <div>
+          <label>Frequency (Hz)</label>
+          <input id="toolFreqHz" type="text" value="6.78e6" />
+        </div>
+        <div>
+          <label>Duty (%)</label>
+          <input id="toolDutyPct" type="text" value="50" />
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+        <button id="calcPulseBtn">Calculate</button>
+        <button id="applyPulseBtn" class="secondary">Apply to Simulation (T & ton)</button>
+      </div>
+
+      <div class="kv mono" style="margin-top:10px;">
+        <div>Period T (s)</div><div id="outPeriod">-</div>
+        <div>ton (s)</div><div id="outTon">-</div>
+        <div>toff (s)</div><div id="outToff">-</div>
+      </div>
+
+      <hr>
+
+      <h4 style="margin:0 0 8px 0;">2) Resonant calculator</h4>
+      <div class="row">
+        <div>
+          <label>Inductance L (H)</label>
+          <input id="toolL_H" type="text" value="4.7u" />
+        </div>
+        <div>
+          <label>Frequency (Hz)</label>
+          <input id="toolResFreqHz" type="text" value="6.78e6" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Apply C to</label>
+          <select id="toolCTarget" style="width:150px;">
+            <option value="C1">C1</option>
+            <option value="C2">C2</option>
+          </select>
+        </div>
+        <div></div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+        <button id="calcResBtn">Calculate</button>
+        <button id="applyResBtn" class="secondary">Apply to Simulation (C1/C2)</button>
+      </div>
+
+      <div class="kv mono" style="margin-top:10px;">
+        <div>C (F)</div><div id="outC_F">-</div>
+      </div>
+
+      <div class="small" style="margin-top:10px;">
+        Formula: C = 1 / ((2πf)² · L)
+      </div>
+
+      <hr>
+
+      <h4 style="margin:0 0 8px 0;">3) Resonant inductor from capacitor</h4>
+      <div class="row">
+        <div>
+          <label>Capacitance C (F)</label>
+          <input id="toolC_F" type="text" value="120p" />
+        </div>
+        <div>
+          <label>Frequency (Hz)</label>
+          <input id="toolResFreqHz2" type="text" value="6.78e6" />
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+        <button id="calcResLBtn">Calculate L</button>
+      </div>
+
+      <div class="kv mono" style="margin-top:10px;">
+        <div>L (H)</div><div id="outL_H">-</div>
+      </div>
+
+      <div class="small" style="margin-top:10px;">
+        Formula: L = 1 / ((2πf)² · C)
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ===================== Tabs logic ===================== */
+(function initTabs(){
+  const buttons = Array.from(document.querySelectorAll(".tab-btn"));
+  const panels = Array.from(document.querySelectorAll(".tab-panel"));
+
+  function safeResize(divId){
+    try { Plotly.Plots.resize(divId); } catch {}
+  }
+
+  function show(tabKey){
+    panels.forEach(p => p.classList.remove("active"));
+    buttons.forEach(b => b.classList.remove("active"));
+
+    const panel = document.getElementById(`tab-${tabKey}`);
+    const btn = buttons.find(x => x.dataset.tab === tabKey);
+    if (panel) panel.classList.add("active");
+    if (btn) btn.classList.add("active");
+
+    setTimeout(() => {
+      if (!window.Plotly) return;
+      if (tabKey === "sim") { safeResize("plotR4"); safeResize("plotR3"); }
+      if (tabKey === "tab1") { safeResize("coilPlot"); }
+    }, 60);
+  }
+
+  buttons.forEach(btn => btn.addEventListener("click", () => show(btn.dataset.tab)));
+  show("tab1");
+})();
+
+/* ===================== Circuit simulation ===================== */
+function vpulse(t, V1, V2, td, tr, tf, ton, T){
+  if (t < td) return V1;
+  const tt = ((t - td) % T + T) % T;
+  if (tt < tr) return V1 + (V2 - V1) * (tt / tr);
+  if (tt < tr + ton) return V2;
+  if (tt < tr + ton + tf) return V2 - (V2 - V1) * ((tt - tr - ton) / tf);
+  return V1;
+}
+
+function solve2x2(a,b,c,d,e,f){
+  const det = a*d - b*c;
+  return [(e*d - b*f)/det, (a*f - e*c)/det];
+}
+
+function deriv(t, x, p, M){
+  const vC1 = x[0], i1 = x[1], i2 = x[2], vC2 = x[3];
+  const vs = vpulse(t, p.V1, p.V2, p.td, p.tr, p.tf, p.ton, p.T);
+
+  const vL1 = vs - vC1 - i1 * (p.R5 + p.R1 + p.R4);
+  const vL2 = vC2 - i2 * (p.R3 + p.R2);
+
+  const [di1, di2] = solve2x2(p.L1, M, M, p.L2, vL1, vL2);
+
+  const dvC1 = i1 / p.C1;
+  const dvC2 = -i2 / p.C2;
+
+  return [dvC1, di1, di2, dvC2];
+}
+
+function integrateRK4(p, k, Tend, dt){
+  const M = k * Math.sqrt(p.L1 * p.L2);
+  if (M*M >= p.L1*p.L2) throw new Error("k is too large: M^2 >= L1*L2 (singular / non-physical).");
+
+  const n = Math.floor(Tend / dt) + 1;
+  const t = new Float64Array(n);
+  const vR4 = new Float64Array(n);
+  const vR3 = new Float64Array(n);
+
+  let x = [0,0,0,0];
+
+  for (let i=0; i<n; i++){
+    const ti = i*dt;
+    t[i] = ti;
+
+    vR4[i] = p.R4 * x[1];
+    vR3[i] = -p.R3 * x[2];
+
+    if (i === n-1) break;
+
+    const k1 = deriv(ti, x, p, M);
+    const x2 = x.map((xi,j)=> xi + 0.5*dt*k1[j]);
+    const k2 = deriv(ti + 0.5*dt, x2, p, M);
+    const x3 = x.map((xi,j)=> xi + 0.5*dt*k2[j]);
+    const k3 = deriv(ti + 0.5*dt, x3, p, M);
+    const x4 = x.map((xi,j)=> xi + dt*k3[j]);
+    const k4 = deriv(ti + dt, x4, p, M);
+
+    x = x.map((xi,j)=> xi + (dt/6)*(k1[j] + 2*k2[j] + 2*k3[j] + k4[j]));
+  }
+
+  return {M, t, vR4, vR3};
+}
+
+function vppLastPeriods(t, y, Tend, lastPeriods, T){
+  const tStart = Tend - lastPeriods*T;
+  let ymin = +Infinity, ymax = -Infinity;
+  for (let i=0; i<t.length; i++){
+    if (t[i] >= tStart){
+      const v = y[i];
+      if (v < ymin) ymin = v;
+      if (v > ymax) ymax = v;
+    }
+  }
+  return ymax - ymin;
+}
+
+function el(id){ return document.getElementById(id); }
+function setStatus(msg){ el("status").textContent = msg; }
+
+function plot(divId, t, y, title, yLabel){
+  const xUs = Array.from(t, v => v*1e6);
+  const trace = { x: xUs, y: Array.from(y), mode: "lines", name: yLabel };
+  const layout = {
+    title,
+    xaxis: { title: "Time (µs)" },
+    yaxis: { title: yLabel },
+    margin: { l: 60, r: 20, t: 40, b: 50 },
+  };
+  Plotly.newPlot(divId, [trace], layout, {responsive:true});
+}
+
+function getParams(){
+  return {
+    R5: +el("R5").value,
+    C1: +el("C1").value,
+    R1: +el("R1").value,
+    L1: +el("L1").value,
+    R4: +el("R4").value,
+    R2: +el("R2").value,
+    L2: +el("L2").value,
+    C2: +el("C2").value,
+    R3: +el("R3").value,
+
+    V1: 0,
+    V2: +el("V2").value,
+    td: 0,
+    tr: 1e-9,
+    tf: 1e-9,
+    ton: +el("ton").value,
+    T: +el("T").value,
+  };
+}
+
+if (el("resetBtn")) el("resetBtn").addEventListener("click", ()=>{
+  if (!el("kNum")) return;
+  el("kNum").value = "0.03";
+  el("dtNum").value = "2e-9";
+  el("TendNum").value = "50e-6";
+  el("lastPeriodsNum").value = "30";
+
+  el("R5").value="0.0015";
+  el("C1").value="120e-12";
+  el("R1").value="1";
+  el("L1").value="4.7e-6";
+  el("R4").value="0.022";
+  el("R2").value="1";
+  el("L2").value="4.9e-6";
+  el("C2").value="112e-12";
+  el("R3").value="10";
+
+  el("V2").value="2";
+  el("ton").value="73.7463e-9";
+  el("T").value="147.4926e-9";
+
+  el("Mout").textContent = "-";
+  el("VppR4").textContent = "-";
+  el("VppR3").textContent = "-";
+
+  setStatus("Reset to schematic defaults.");
+});
+
+if (el("runBtn")) el("runBtn").addEventListener("click", ()=>{
+  try {
+    setStatus("Running... (reduce dt if unstable; reduce Tend if slow)");
+
+    const p = getParams();
+    const k = +el("kNum").value;
+    const dt = +el("dtNum").value;
+    const Tend = +el("TendNum").value;
+    const lastPeriods = Math.max(1, Math.floor(+el("lastPeriodsNum").value));
+
+    if (!(dt > 0 && Tend > 0)) throw new Error("dt and Tend must be positive.");
+    if (!(k >= 0 && k < 1)) throw new Error("k should be in [0, 1).");
+
+    const {M, t, vR4, vR3} = integrateRK4(p, k, Tend, dt);
+    const VppR4 = vppLastPeriods(t, vR4, Tend, lastPeriods, p.T);
+    const VppR3 = vppLastPeriods(t, vR3, Tend, lastPeriods, p.T);
+
+    el("Mout").textContent = M.toExponential(6);
+    el("VppR4").textContent = VppR4.toPrecision(6);
+    el("VppR3").textContent = VppR3.toPrecision(6);
+
+    plot("plotR4", t, vR4, `V_R4 (Vpp=${VppR4.toPrecision(6)} V, k=${k})`, "V_R4 (V)");
+    plot("plotR3", t, vR3, `V_R3 (Vpp=${VppR3.toPrecision(6)} V, k=${k})`, "V_R3 (V)");
+
+    setStatus(`Done: N=${t.length}, dt=${dt} s, Tend=${Tend} s.`);
+  } catch (e){
+    console.error(e);
+    setStatus("Error: " + (e?.message ?? String(e)));
+  }
+});
+
+/* ===================== Tab 3 Tools ===================== */
+function fmt(x) {
+  if (!Number.isFinite(x)) return "-";
+  return (Math.abs(x) >= 1e-3 && Math.abs(x) < 1e4) ? x.toPrecision(8) : x.toExponential(6);
+}
+
+function parseEngNumber(raw) {
+  const s = String(raw ?? "").trim();
+  if (!s) return NaN;
+
+  const m = s.match(/^([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s*([a-zA-Zµμ]*)$/);
+  if (!m) return NaN;
+
+  const base = Number(m[1]);
+  if (!Number.isFinite(base)) return NaN;
+
+  const suffix = m[2] || "";
+  if (!suffix) return base;
+
+  const prefix = suffix[0];
+  const factors = {
+    p: 1e-12,
+    n: 1e-9,
+    u: 1e-6,
+    "µ": 1e-6,
+    "μ": 1e-6,
+    m: 1e-3,
+    k: 1e3,
+    K: 1e3,
+    M: 1e6,
+    G: 1e9
+  };
+
+  if (Object.prototype.hasOwnProperty.call(factors, prefix)) {
+    return base * factors[prefix];
+  }
+
+  // Unknown suffix like "Hz"/"F" is treated as unit text with scale 1.
+  return base;
+}
+
+function calcPulseFromFreq() {
+  const f = parseEngNumber(el("toolFreqHz").value);
+  const dutyPct = parseEngNumber(el("toolDutyPct").value);
+
+  if (!(f > 0)) throw new Error("Frequency must be > 0.");
+  if (!(dutyPct > 0 && dutyPct < 100)) throw new Error("Duty must be between 0 and 100.");
+
+  const T = 1 / f;
+  const duty = dutyPct / 100;
+  const ton = T * duty;
+  const toff = T - ton;
+
+  el("outPeriod").textContent = fmt(T);
+  el("outTon").textContent = fmt(ton);
+  el("outToff").textContent = fmt(toff);
+
+  return { T, ton, toff };
+}
+
+function calcResC() {
+  const L = parseEngNumber(el("toolL_H").value);
+  const f = parseEngNumber(el("toolResFreqHz").value);
+
+  if (!(L > 0)) throw new Error("L must be > 0.");
+  if (!(f > 0)) throw new Error("Frequency must be > 0.");
+
+  const w = 2 * Math.PI * f;
+  const C = 1 / (w*w * L);
+
+  el("outC_F").textContent = fmt(C);
+
+  return { C };
+}
+
+function calcResL() {
+  const C = parseEngNumber(el("toolC_F").value);
+  const f = parseEngNumber(el("toolResFreqHz2").value);
+
+  if (!(C > 0)) throw new Error("C must be > 0.");
+  if (!(f > 0)) throw new Error("Frequency must be > 0.");
+
+  const w = 2 * Math.PI * f;
+  const L = 1 / (w*w * C);
+
+  el("outL_H").textContent = fmt(L);
+
+  return { L };
+}
+
+el("calcPulseBtn").addEventListener("click", () => {
+  try { calcPulseFromFreq(); }
+  catch (e) { alert("Pulse timing error: " + (e?.message ?? String(e))); }
+});
+
+el("applyPulseBtn").addEventListener("click", () => {
+  try {
+    const { T, ton } = calcPulseFromFreq();
+    el("T").value = String(T);
+    el("ton").value = String(ton);
+  } catch (e) {
+    alert("Apply pulse error: " + (e?.message ?? String(e)));
+  }
+});
+
+el("calcResBtn").addEventListener("click", () => {
+  try { calcResC(); }
+  catch (e) { alert("Resonance error: " + (e?.message ?? String(e))); }
+});
+
+el("applyResBtn").addEventListener("click", () => {
+  try {
+    const { C } = calcResC();
+    const target = el("toolCTarget").value;
+    el(target).value = String(C);
+  } catch (e) {
+    alert("Apply C error: " + (e?.message ?? String(e)));
+  }
+});
+
+el("calcResLBtn").addEventListener("click", () => {
+  try { calcResL(); }
+  catch (e) { alert("Resonant L error: " + (e?.message ?? String(e))); }
+});
+
+/* ===================== Tab 1 Coil Design (separate spiral vs PCB params) ===================== */
+const MU0 = 4 * Math.PI * 1e-7;
+const EPS0 = 8.854187817e-12;
+
+function inch(x_m){ return x_m / 0.0254; }
+function setText(id, s){ document.getElementById(id).textContent = s; }
+
+function wheelerPancake_L_H(N, rAvg_m, windingWidth_m){
+  // Wheeler pancake coil approximation (engineering quick estimate)
+  const r_in = inch(rAvg_m);
+  const w_in = inch(windingWidth_m);
+  const L_uH = (r_in * r_in * N * N) / (8 * r_in + 11 * w_in);
+  return L_uH * 1e-6;
+}
+
+function wheelerSolenoid_L_H(N, rMean_m, length_m){
+  // Wheeler single-layer solenoid approximation.
+  // Uses radius and axial length in the same unit (inches here), returns H.
+  const r_in = inch(rMean_m);
+  const l_in = inch(length_m);
+  const L_uH = (r_in * r_in * N * N) / (9 * r_in + 10 * l_in);
+  return L_uH * 1e-6;
+}
+
+function groverLoopSelf_L_H(loopRadius_m, wireRadius_m){
+  // Grover thin circular loop approximation.
+  // Good for a round wire loop when wireRadius << loopRadius.
+  return MU0 * loopRadius_m * (Math.log((8 * loopRadius_m) / wireRadius_m) - 2);
+}
+
+function groverLoopMutual_L_H(r1_m, r2_m, sep_m){
+  // Exact thin-filament mutual inductance between two coaxial circular loops.
+  // Uses complete elliptic integrals computed numerically so helix error stays
+  // low as turn count increases.
+  const a = Math.max(r1_m, 1e-12);
+  const b = Math.max(r2_m, 1e-12);
+  const z = Math.abs(sep_m);
+  const k2 = (4 * a * b) / ((a + b) * (a + b) + z * z);
+  const k = Math.sqrt(Math.min(Math.max(k2, 0), 1 - 1e-15));
+  const { K, E } = completeEllipticKE(k2);
+  return MU0 * Math.sqrt(a * b) * (((2 / Math.max(k, 1e-15)) - k) * K - (2 / Math.max(k, 1e-15)) * E);
+}
+
+function completeEllipticKE(m){
+  // Numerical complete elliptic integrals of the first and second kind.
+  // m is the parameter (k^2), 0 <= m < 1.
+  const n = 256;
+  const h = (Math.PI / 2) / n;
+  let sumK = 0;
+  let sumE = 0;
+
+  for (let i = 0; i <= n; i++){
+    const theta = i * h;
+    const s = Math.sin(theta);
+    const v = 1 - m * s * s;
+    const fk = 1 / Math.sqrt(v);
+    const fe = Math.sqrt(v);
+    const weight = (i === 0 || i === n) ? 1 : (i % 2 === 0 ? 2 : 4);
+    sumK += weight * fk;
+    sumE += weight * fe;
+  }
+
+  return {
+    K: (h / 3) * sumK,
+    E: (h / 3) * sumE
+  };
+}
+
+function modifiedWheeler_L_H(N, dAvg_m, rho, K1=2.34, K2=2.75){
+  // Modified Wheeler / Mohan-style form (quick PCB planar estimate)
+  return (K1 * MU0 * N * N * dAvg_m) / (1 + K2 * rho);
+}
+
+function estimateCp_F(er, t_m, lGap_m, gap_m){
+  // VERY rough Cp proxy: eps0*er*(t/gap)*lGap
+  if (!(gap_m > 0) || !(t_m > 0) || !(lGap_m > 0)) return NaN;
+  return EPS0 * er * t_m * (lGap_m / gap_m);
+}
+
+function buildSpiralPoints3D(N, rCenterStart_m, pitch_m){
+  // Archimedean spiral centerline: r(θ)=r0+aθ, a=pitch/(2π)
+  const thetaMax = 2 * Math.PI * N;
+  const a = pitch_m / (2 * Math.PI);
+  const steps = Math.max(900, Math.floor(280 * N));
+
+  const xs = [];
+  const ys = [];
+  const zs = [];
+  for (let i=0; i<=steps; i++){
+    const th = thetaMax * (i/steps);
+    const r = rCenterStart_m + a * th;
+    xs.push(r * Math.cos(th));
+    ys.push(r * Math.sin(th));
+    zs.push(0);
+  }
+  return { xs, ys, zs };
+}
+
+function buildHelixPoints3D(N, radius_m, pitch_m){
+  const thetaMax = 2 * Math.PI * N;
+  const steps = Math.max(900, Math.floor(280 * N));
+  const xs = [];
+  const ys = [];
+  const zs = [];
+  for (let i = 0; i <= steps; i++){
+    const th = thetaMax * (i / steps);
+    xs.push(radius_m * Math.cos(th));
+    ys.push(radius_m * Math.sin(th));
+    zs.push((pitch_m / (2 * Math.PI)) * th);
+  }
+  return { xs, ys, zs };
+}
+
+const COIL_COPPER = "#c97a2b";
+
+function normalize3(x, y, z){
+  const len = Math.hypot(x, y, z);
+  if (!len) return [0, 0, 0];
+  return [x / len, y / len, z / len];
+}
+
+function cross3(ax, ay, az, bx, by, bz){
+  return [
+    ay * bz - az * by,
+    az * bx - ax * bz,
+    ax * by - ay * bx
+  ];
+}
+
+function buildSweptMesh3D(xs, ys, zs, radiusNormal_m, radiusBinormal_m, sides = 18){
+  const pointCount = xs.length;
+  const binormal = [0, 0, 1];
+  const verticesX = [];
+  const verticesY = [];
+  const verticesZ = [];
+
+  for (let i = 0; i < pointCount; i++){
+    const prev = Math.max(0, i - 1);
+    const next = Math.min(pointCount - 1, i + 1);
+    const tx = xs[next] - xs[prev];
+    const ty = ys[next] - ys[prev];
+    const tz = zs[next] - zs[prev];
+    const [nx0, ny0, nz0] = cross3(binormal[0], binormal[1], binormal[2], tx, ty, tz);
+    const [nx, ny, nz] = normalize3(nx0, ny0, nz0);
+
+    for (let j = 0; j < sides; j++){
+      const angle = (2 * Math.PI * j) / sides;
+      const cosA = Math.cos(angle);
+      const sinA = Math.sin(angle);
+      const offsetX = radiusNormal_m * cosA * nx + radiusBinormal_m * sinA * binormal[0];
+      const offsetY = radiusNormal_m * cosA * ny + radiusBinormal_m * sinA * binormal[1];
+      const offsetZ = radiusNormal_m * cosA * nz + radiusBinormal_m * sinA * binormal[2];
+      verticesX.push(xs[i] + offsetX);
+      verticesY.push(ys[i] + offsetY);
+      verticesZ.push(zs[i] + offsetZ);
+    }
+  }
+
+  const ii = [];
+  const jj = [];
+  const kk = [];
+  for (let i = 0; i < pointCount - 1; i++){
+    for (let j = 0; j < sides; j++){
+      const nextJ = (j + 1) % sides;
+      const a = i * sides + j;
+      const b = i * sides + nextJ;
+      const c = (i + 1) * sides + j;
+      const d = (i + 1) * sides + nextJ;
+      ii.push(a, b);
+      jj.push(c, c);
+      kk.push(b, d);
+    }
+  }
+
+  return { x: verticesX, y: verticesY, z: verticesZ, i: ii, j: jj, k: kk };
+}
+
+function buildCoilMeshTrace(xs, ys, zs, options = {}){
+  const MM_PER_M = 1000;
+  const radiusNormal_m = options.radiusNormal_m ?? 0.00025;
+  const radiusBinormal_m = options.radiusBinormal_m ?? radiusNormal_m;
+  const color = options.color ?? COIL_COPPER;
+  const mesh = buildSweptMesh3D(
+    xs.map(v => v * MM_PER_M),
+    ys.map(v => v * MM_PER_M),
+    zs.map(v => v * MM_PER_M),
+    radiusNormal_m * MM_PER_M,
+    radiusBinormal_m * MM_PER_M,
+    options.sides ?? 18
+  );
+  return {
+    type: "mesh3d",
+    x: mesh.x,
+    y: mesh.y,
+    z: mesh.z,
+    i: mesh.i,
+    j: mesh.j,
+    k: mesh.k,
+    color,
+    opacity: 1,
+    flatshading: true,
+    lighting: {
+      ambient: 0.95,
+      diffuse: 0.08,
+      specular: 0.0,
+      roughness: 1.0,
+      fresnel: 0.0
+    },
+    name: "coil"
+  };
+}
+
+function plotCoils3D(divId, coils, title, options = {}){
+  const traces = coils.map(c => buildCoilMeshTrace(c.xs, c.ys, c.zs, options));
+  const layout = {
+    title,
+    scene: {
+      xaxis: { title: "x (mm)" },
+      yaxis: { title: "y (mm)" },
+      zaxis: { title: "z (mm)" },
+      aspectmode: "data"
+    },
+    margin: { l: 0, r: 0, t: 40, b: 0 }
+  };
+  Plotly.newPlot(divId, traces, layout, { responsive: true });
+}
+
+function updateCoilUI(){
+  const type = document.getElementById("coilType").value;
+  const sp = document.getElementById("spiralParams");
+  const pcb = document.getElementById("pcbParams");
+  const planarLayerParams = document.getElementById("planarLayerParams");
+  const planarLayerHint = document.getElementById("planarLayerHint");
+  const doutLabel = document.getElementById("spDoutLabel");
+  const pitchLabel = document.getElementById("spPitchLabel");
+  const dwireLabel = document.getElementById("spDwireLabel");
+  if (type === "planar" || type === "helix" || type === "spiral"){
+    sp.style.display = "block";
+    pcb.style.display = "none";
+  } else {
+    sp.style.display = "none";
+    pcb.style.display = "block";
+  }
+
+  if (type === "helix"){
+    doutLabel.textContent = "Cylinder radius R (mm)";
+    pitchLabel.textContent = "Pitch (mm) (axial rise per turn)";
+    dwireLabel.textContent = "Wire diameter dwire (mm)";
+    planarLayerParams.style.display = "none";
+    planarLayerHint.style.display = "none";
+  } else {
+    doutLabel.textContent = "Planar start radius Rstart (mm) (innermost center radius)";
+    pitchLabel.textContent = "Pitch (mm) (centerline spacing per turn)";
+    dwireLabel.textContent = "Wire diameter dwire (mm)";
+    planarLayerParams.style.display = type === "planar" ? "grid" : "none";
+    planarLayerHint.style.display = type === "planar" ? "block" : "none";
+  }
+}
+
+function updatePCBSubstrateEr(){
+  const preset = document.getElementById("pcbSubstratePreset");
+  const erInput = document.getElementById("coilEr_pcb");
+  if (preset && erInput){
+    erInput.value = preset.value;
+  }
+}
+
+document.getElementById("coilType").addEventListener("change", updateCoilUI);
+document.getElementById("pcbSubstratePreset").addEventListener("change", updatePCBSubstrateEr);
+updateCoilUI();
+updatePCBSubstrateEr();
+
+document.getElementById("coilRunBtn").addEventListener("click", () => {
+  try{
+    const type = document.getElementById("coilType").value;
+    const N = Math.max(1, Math.floor(+document.getElementById("coilN").value));
+
+    let Din_m, Dout_m, rCenterStart_m, pitch_m;
+    let conductorWidth_m, conductorThickness_m, er, gap_m;
+    let L = NaN;
+    let planarLayers = 1;
+    let planarLayerSpacing_m = 0;
+    const MM_TO_M = 1e-3;
+
+    if (type === "planar" || type === "spiral"){
+      // Planar spiral: start radius, pitch, wire diameter, turns
+      const Rstart = +document.getElementById("spDout").value * MM_TO_M;
+      const pitch = +document.getElementById("spPitch").value * MM_TO_M;
+      const dwire = +document.getElementById("spDwire").value * MM_TO_M;
+      planarLayers = Math.max(1, Math.floor(+document.getElementById("planarLayers").value));
+      planarLayerSpacing_m = +document.getElementById("planarLayerSpacing").value * MM_TO_M;
+      er = +document.getElementById("coilEr").value;
+
+      if (!(Rstart > 0 && pitch > 0 && dwire > 0)) throw new Error("Planar spiral: Rstart/pitch/dwire must be > 0.");
+      if (pitch < dwire) throw new Error("Planar spiral: pitch must be >= wire diameter (to avoid overlap).");
+      if (!(er > 0)) throw new Error("Planar spiral: εr must be > 0.");
+      if (!(planarLayers > 0)) throw new Error("Planar spiral: layer count must be >= 1.");
+      if (planarLayers > 1 && !(planarLayerSpacing_m > 0)) throw new Error("Planar spiral: layer spacing must be > 0 for multilayer.");
+
+      // Geometry interpretation:
+      // - Rstart is innermost centerline radius
+      // - outermost centerline radius is rOuterCenter = r0 + (N-1)*pitch
+      const r0 = Rstart;
+      const rOuterCenter = r0 + (N - 1) * pitch;
+      if (!(r0 > 0)) throw new Error("Planar spiral: inner radius <= 0 (increase Rstart).");
+
+      rCenterStart_m = r0;
+      pitch_m = pitch;
+      conductorWidth_m = dwire;        // treat wire diameter as effective width
+      conductorThickness_m = dwire;    // rough (used only for Cp proxy)
+      gap_m = pitch - dwire;
+
+      // Edge radii (approx)
+      const rInnerEdge = r0 - dwire/2;
+      const rOuterEdge = rOuterCenter + dwire/2;
+      if (!(rInnerEdge > 0)) throw new Error("Planar spiral: inner edge radius <= 0.");
+
+      Din_m = 2 * rInnerEdge;
+      Dout_m = 2 * rOuterEdge;
+
+      // L via Wheeler pancake (avg radius + winding width)
+      const rAvg = (rInnerEdge + rOuterEdge) / 2;
+      const windingWidth = rOuterEdge - rInnerEdge;
+      const Lsingle = wheelerPancake_L_H(N, rAvg, windingWidth);
+      if (planarLayers === 1){
+        L = Lsingle;
+      } else {
+        // Rough multilayer model: series-aiding stack with distance-decayed coupling.
+        const charLen = Math.max(Dout_m, 1e-6);
+        const decayLen = 0.35 * charLen;
+        let pairCouplingSum = 0;
+        for (let sep = 1; sep < planarLayers; sep++){
+          const dz = sep * planarLayerSpacing_m;
+          const kSep = Math.exp(-dz / Math.max(decayLen, 1e-9));
+          pairCouplingSum += (planarLayers - sep) * kSep;
+        }
+        L = Lsingle * (planarLayers + 2 * pairCouplingSum);
+      }
+
+    } else if (type === "helix") {
+      // Cylindrical spiral (helix): cylinder radius, pitch, wire diameter, turns
+      const R = +document.getElementById("spDout").value * MM_TO_M;
+      const pitch = +document.getElementById("spPitch").value * MM_TO_M;
+      const dwire = +document.getElementById("spDwire").value * MM_TO_M;
+      er = +document.getElementById("coilEr").value;
+
+      if (!(R > 0 && pitch > 0 && dwire > 0)) throw new Error("Helix: R/pitch/dwire must be > 0.");
+      if (pitch < dwire) throw new Error("Helix: pitch must be >= wire diameter (to avoid overlap).");
+      if (!(er > 0)) throw new Error("Helix: εr must be > 0.");
+
+      const rCenter = R - (dwire / 2);
+      if (!(rCenter > 0)) throw new Error("Helix: radius too small for the wire diameter.");
+
+      rCenterStart_m = rCenter;
+      pitch_m = pitch;
+      conductorWidth_m = dwire;
+      conductorThickness_m = dwire;
+      gap_m = pitch - dwire;
+
+      Dout_m = 2 * R;
+      Din_m = Math.max(0, 2 * (R - dwire));
+
+      const turnRadius = R - (dwire / 2);
+      const wireRadius = dwire / 2;
+      const turnZ = Array.from({ length: N }, (_, i) => i * pitch);
+
+      L = 0;
+      for (let i = 0; i < N; i++){
+        L += groverLoopSelf_L_H(turnRadius, wireRadius);
+        for (let j = i + 1; j < N; j++){
+          const sep = Math.abs(turnZ[j] - turnZ[i]);
+          L += 2 * groverLoopMutual_L_H(turnRadius, turnRadius, sep);
+        }
+      }
+
+    } else {
+      // PCB: thickness, width, start diameter, pitch, turns
+      const tcu = +document.getElementById("pcbTcu").value * MM_TO_M;
+      const w = +document.getElementById("pcbW").value * MM_TO_M;
+      const Rstart = +document.getElementById("pcbRstart").value * MM_TO_M;
+      const pitch = +document.getElementById("pcbPitch").value * MM_TO_M;
+      er = +document.getElementById("coilEr_pcb").value;
+
+      if (!(tcu > 0 && w > 0 && Rstart > 0 && pitch > 0)) throw new Error("PCB: t/w/Rstart/pitch must be > 0.");
+      if (pitch < w) throw new Error("PCB: pitch must be >= width (spacing = pitch - width).");
+      if (!(er > 0)) throw new Error("PCB: εr must be > 0.");
+
+      // Geometry interpretation:
+      // - Rstart is the center radius of the innermost turn
+      // - centerline start radius r0 = Rstart
+      // - outermost centerline radius rN = r0 + (N-1)*pitch
+      // - edges expand by ±w/2 around centerline
+      const r0 = Rstart;
+      const rN = r0 + (N - 1) * pitch;
+      const rInnerEdge = r0 - w/2;
+      const rOuterEdge = rN + w/2;
+
+      if (!(rInnerEdge > 0)) throw new Error("PCB: inner edge radius <= 0 (increase Rstart or reduce width).");
+
+      rCenterStart_m = r0;
+      pitch_m = pitch;
+      conductorWidth_m = w;
+      conductorThickness_m = tcu;
+      gap_m = pitch - w;
+
+      Din_m = 2 * rInnerEdge;
+      Dout_m = 2 * rOuterEdge;
+
+      // L via modified Wheeler form (use average diameter and rho)
+      const dAvg = (Din_m + Dout_m) / 2;
+      const rho = (Dout_m - Din_m) / (Dout_m + Din_m);
+      L = modifiedWheeler_L_H(N, dAvg, rho);
+    }
+
+    // 3D preview
+    const pts = (type === "helix")
+      ? buildHelixPoints3D(N, rCenterStart_m, pitch_m)
+      : buildSpiralPoints3D(N, rCenterStart_m, pitch_m);
+    const coils = [];
+    if (type === "planar" && planarLayers > 1){
+      for (let layer = 0; layer < planarLayers; layer++){
+        const zOffset = layer * planarLayerSpacing_m;
+        coils.push({
+          xs: pts.xs,
+          ys: pts.ys,
+          zs: pts.zs.map(z => z + zOffset)
+        });
+      }
+    } else {
+      coils.push(pts);
+    }
+    plotCoils3D(
+      "coilPlot",
+      coils,
+      `Solid 3D coil preview (${type === "helix" ? "helix" : type}, N=${N}${type === "planar" ? `, layers=${planarLayers}` : ""})`,
+      {
+        radiusNormal_m: Math.max(conductorWidth_m / 2, 1e-6),
+        radiusBinormal_m: Math.max(conductorThickness_m / 2, 1e-6),
+        color: COIL_COPPER,
+        sides: type === "pcb" ? 16 : 20
+      }
+    );
+
+    // Rough Cp and SRF
+    // Approx total "gap length": sum of circumferences for each inter-turn gap
+    let lGap = 0;
+    for (let i=0; i<N-1; i++){
+      const rGap = rCenterStart_m + (i + 0.5) * pitch_m;
+      lGap += 2 * Math.PI * rGap;
+    }
+    if (type === "planar" && planarLayers > 1){
+      lGap *= planarLayers;
+    }
+    const Cp = estimateCp_F(er, conductorThickness_m, lGap, Math.max(gap_m, 1e-12));
+    const fSrf = (Cp > 0 && L > 0) ? (1 / (2 * Math.PI * Math.sqrt(L * Cp))) : NaN;
+
+    setText("coilDin", (Din_m * 1000).toExponential(6));
+    setText("coilDoutOut", (Dout_m * 1000).toExponential(6));
+    setText("coilL", L.toExponential(6));
+    setText("coilCp", Number.isFinite(Cp) ? Cp.toExponential(6) : "-");
+    setText("coilSrf", Number.isFinite(fSrf) ? fSrf.toExponential(6) : "-");
+
+  } catch(e){
+    console.error(e);
+    setText("coilDin","-");
+    setText("coilDoutOut","-");
+    setText("coilL","-");
+    setText("coilCp","-");
+    setText("coilSrf","-");
+    alert("Tab 1 error: " + (e?.message ?? String(e)));
+  }
+});
+
+
+/* Initial empty plots */
+if (document.getElementById("plotR4")) Plotly.newPlot("plotR4", [{x:[0],y:[0],mode:"lines"}], {title:"V_R4", xaxis:{title:"Time (µs)"}, yaxis:{title:"V"}});
+if (document.getElementById("plotR3")) Plotly.newPlot("plotR3", [{x:[0],y:[0],mode:"lines"}], {title:"V_R3", xaxis:{title:"Time (µs)"}, yaxis:{title:"V"}});
+Plotly.newPlot("coilPlot", [{
+  type:"mesh3d", x:[0], y:[0], z:[0], i:[], j:[], k:[], opacity:0
+}], {title:"Solid 3D coil preview", scene:{aspectmode:"data"}, margin:{l:0,r:0,t:40,b:0}}, {responsive:true});
+</script>
+</body>
+</html>
